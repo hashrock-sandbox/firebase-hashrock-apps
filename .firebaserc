@@ -7,6 +7,9 @@
       "hosting": {
         "text": [
           "hashrock-apps-text"
+        ],
+        "blog": [
+          "hashrock-apps-blog"
         ]
       }
     }
