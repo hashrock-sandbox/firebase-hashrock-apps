@@ -8,7 +8,7 @@
   },
   "hosting": [
     {
-      "public": "text/public",
+      "public": "text/dist",
       "target": "text",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [
