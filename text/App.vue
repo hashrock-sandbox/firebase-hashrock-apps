@@ -3,20 +3,21 @@
     <p>init</p>
     <p>{{user.displayName}}</p>
     <button @click="login">login</button>
+    <div v-for="(item, idx) in items" :key="idx">
+      {{item}}
+    </div>
   </div>
 </template>
 <script>
 import * as firebase from "firebase/app";
-
-// Add the Firebase products that you want to use
 import "firebase/auth";
 import "firebase/firestore";
 import {firebaseConfig} from "../share/config"
 
-
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth()
+      var db = firebase.firestore();
 
 export default {
   data() {
@@ -34,7 +35,6 @@ export default {
       auth.signOut();
     },
     addPost() {
-      var db = firebase.firestore();
       db.doc(`users/${this.user.uid}`)
         .collection("posts")
         .add({
@@ -72,6 +72,26 @@ export default {
   mounted() {
     auth.onAuthStateChanged(user => {
       this.user = user;
+      console.log(user)
+      db.doc(`users/${user.uid}`)      
+      .collection("posts")
+      // .orderBy("timestamp", "desc")
+      .limit(100)
+      .onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type === "added") {
+            this.items.push({
+              ...change.doc.data({ serverTimestamps: "estimate" }),
+              id: change.doc.id
+            });
+          } else if (change.type === "modified") {
+            // commit('set', payload)
+          } else if (change.type === "removed") {
+            // commit('remove', payload)
+          }
+        });
+      });
+
     });
   }
 
