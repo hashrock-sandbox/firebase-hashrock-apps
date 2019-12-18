@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "hashrock-apps"
+  },
+  "targets": {
+    "hashrock-apps": {
+      "hosting": {
+        "text": [
+          "hashrock-apps-text"
+        ]
+      }
+    }
+  }
+}
