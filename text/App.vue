@@ -1,15 +1,37 @@
 <template>
-  <div>
-    <div>
-    {{user.displayName}}
-    <button v-if="!user" @click="login">login</button>
-    <button v-if="user" @click="logout">logout</button>
+  <div class="wrapper">
+    <div class="itemList">
+      <div style="display: flex; justify-content: center; align-items: center; padding: 0.25em;">
+        <img width=64 src="./icon-dark.svg">
+      </div>
+      <div class="login" style="font-size: 0.8em; background: #666; display: flex;">
+        <div class="login__name" style="flex: 1; margin: 0 0.5em;" v-if="user">
+          {{user.displayName}}さん
+        </div>
+        <button v-if="!user" @click="login">Login</button>
+        <button v-if="user" @click="logout">Logout</button>
+      </div>
+      <div v-if="user">
+        <div
+          v-for="(item) in items"
+          :key="item.id"
+          @click="selectItem(item)"
+          class="item"
+          :class="{'selected': selectedId === item.id}"
+        >
+          <div class="item__label">
+            {{item.name}}
+          </div>
+          <button class="item__remove" @click="removeItem(item)">x</button>
+        </div>
+        <button @click="addPost" class="addPost">New Document</button>
+      </div>
+      
     </div>
-    <div v-for="(item, idx) in items" :key="idx" @click="selectItem(item)" class="item" :class="{'selected': selectedId === item.id}">
-      {{item.name}} <button @click="removeItem(item)">x</button>
+    <div class="form">
+      <input type="text" v-model="name" @input="debouncedSave" />
+      <textarea :disabled="!selectedItem" v-model="contents" @input="debouncedSave" class="source"></textarea>
     </div>
-    <button @click="addPost">Add</button>
-    <textarea :disabled="!selectedItem" v-model="contents" @input="debouncedSave"></textarea>
   </div>
 </template>
 <script>
@@ -17,42 +39,58 @@ import * as firebase from "firebase/app";
 import "firebase/auth";
 import "firebase/firestore";
 import { firebaseConfig } from "../share/config";
-import debounce from 'lodash.debounce';
+import debounce from "lodash.debounce";
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 let db = firebase.firestore();
 
+function getYMD() {
+  const dt = new Date();
+  const y = dt.getFullYear();
+  const m = (dt.getMonth() + 1).toString().padStart(2, "0");
+  const d = dt
+    .getDate()
+    .toString()
+    .padStart(2, "0");
+  const ho = dt.getHours().toString().padStart(2, "0");
+  const mi = dt.getMinutes().toString().padStart(2, "0");
+  const result = `${y}-${m}-${d} ${ho}:${mi}`;
+  return result;
+}
+
 export default {
   data() {
     return {
-      msg: "Hello",
       user: {},
       items: [],
       contents: "",
+      name: "",
       selectedId: "",
-      original: "",
+      original: ""
     };
   },
   computed: {
-    selectedDoc(){
-      return db.doc(`users/${this.user.uid}`)
+    selectedDoc() {
+      return db
+        .doc(`users/${this.user.uid}`)
         .collection("posts")
-        .doc(this.selectedId)
+        .doc(this.selectedId);
     },
-    selectedItem(){
-      return this.items.find((i)=>i.id === this.selectedId)
+    selectedItem() {
+      return this.items.find(i => i.id === this.selectedId);
     },
-    dirty(){
-      return this.original !== this.contents
+    dirty() {
+      return this.original !== this.contents;
     }
   },
   methods: {
-    getDocById(id){
-      return db.doc(`users/${this.user.uid}`)
+    getDocById(id) {
+      return db
+        .doc(`users/${this.user.uid}`)
         .collection("posts")
-        .doc(id)
+        .doc(id);
     },
     login() {
       auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
@@ -60,62 +98,61 @@ export default {
     logout() {
       auth.signOut();
     },
-    selectItem(item){
-      if(this.dirty){
-        this.selectedDoc.update(
-          {
+    selectItem(item) {
+      if (this.dirty) {
+        this.selectedDoc
+          .update({
             contents: this.contents,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          }
-        ).then(()=>{
-          this.selectedId = item.id;
-          this.contents = item.contents;
-          this.original = this.contents;
-        })
-      }else{
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          })
+          .then(() => {
+            this.selectedId = item.id;
+            this.contents = item.contents;
+            this.original = this.contents;
+            this.name = item.name;
+          });
+      } else {
         this.selectedId = item.id;
         this.contents = item.contents;
         this.original = this.contents;
+        this.name = item.name;
       }
     },
-    save(){
-      this.selectedDoc.update(
-        {
-          contents: this.contents,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        }
-      )
-      this.selectedItem.contents = this.contents;
+    save() {
+      this.selectedDoc.update({
+        contents: this.contents,
+        name: this.name,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
       this.original = this.contents;
     },
     addPost() {
       const post = {
-          name: "Sample",
-          contents: this.contents,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      }
-      this.contents = "";
-      this.original = this.contents;
+        name: `Memo ${getYMD()}`,
+        contents: this.contents,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      this.clear();
 
       db.doc(`users/${this.user.uid}`)
         .collection("posts")
         .add(post)
-        .then((docRef)=> {
-          this.selectedId = docRef.id
+        .then(docRef => {
+          this.selectedId = docRef.id;
           console.log("Document written with ID: ", docRef.id);
         })
-        .catch((error)=> {
+        .catch(error => {
           console.error("Error adding document: ", error);
         });
     },
-    removeItem(item){
-      console.log(item)
-      console.log(this.getDocById(item.id))
-      this.getDocById(item.id).delete()
-      this.items.splice(this.items.indexOf(item), 1);
-      this.contents = ""
+    removeItem(item) {
+      this.getDocById(item.id).delete();
+      this.clear();
+    },
+    clear() {
+      this.contents = "";
       this.original = this.contents;
-      this.selectedId = ""
+      this.selectedId = "";
     }
   },
   mounted() {
@@ -123,7 +160,6 @@ export default {
       this.user = user;
       db.doc(`users/${user.uid}`)
         .collection("posts")
-        // .orderBy("timestamp", "desc")
         .limit(100)
         .onSnapshot(snapshot => {
           snapshot.docChanges().forEach(change => {
@@ -133,24 +169,111 @@ export default {
                 id: change.doc.id
               });
             } else if (change.type === "modified") {
-              console.log("modi")
-              // commit('set', payload)
+              const found = this.items.find(i => {
+                return i.id === change.doc.id;
+              });
+
+              if (found) {
+                Object.assign(
+                  found,
+                  change.doc.data({ serverTimestamps: "estimate" })
+                );
+                if (this.selectedItem === found) {
+                  this.contents = found.contents;
+                }
+              }
+              console.log("mod");
             } else if (change.type === "removed") {
-              // commit('remove', payload)
-              console.log("rm")
+              this.items.splice(
+                this.items.findIndex(i => {
+                  return i.id === change.doc.id;
+                }),
+                1
+              );
+              console.log("rm");
             }
           });
         });
     });
   },
-  created: function () {
-    this.debouncedSave = debounce(this.save, 500)
-  },  
+  created: function() {
+    this.debouncedSave = debounce(this.save, 500);
+  }
 };
 </script>
 <style>
-.item.selected{
-  background: yellow;
+body,
+html {
+  height: 100%;
+  margin: 0;
+}
+.wrapper {
+  display: flex;
+  height: 100%;
+}
+.itemList {
+  width: 200px;
+  background: #333;
+  color: white;
+}
+.form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.item {
+  background: #333;
+  cursor: pointer;
+  color: #ddd;
+  font-family: system-ui;
+  font-size: 0.9em;
+  display: flex;
+}
+.item:hover {
+  background: #666;
+}
+.item.selected {
+  background: #99a;
+  color: white;
+}
+.item__label{
+  padding: 0.25em 0.5em;
+  flex: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+.item__remove{
+  background: none;
+  color: white;
+  border: none;
+  opacity: 0;
+}
+.item:hover .item__remove{
+  opacity: 1;
+}
+.item__remove:hover{
+  color: #CCF;
+}
+
+
+.source {
+  flex: 1;
+  width: 100%;
+}
+.addPost{
+  width: 100%; line-height: 1.5rem; background: #333; color: white; border: 1px solid white; margin-top: 4px;
+  outline: none;
+}
+.addPost:hover{
+  background: #666;
+}
+.addPost:focus{
+  border:1px solid orange;
+}
+.addPost:active{
+  border:1px solid white;
 }
 
 </style>
