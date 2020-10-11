@@ -2,12 +2,14 @@
   <div class="wrapper">
     <div class="itemList">
       <div style="display: flex; justify-content: center; align-items: center; padding: 0.25em;">
-        <img width=64 src="./icon-dark.svg">
+        <img width="64" src="./icon-dark.svg" />
       </div>
       <div class="login" style="font-size: 0.8em; background: #666; display: flex;">
-        <div class="login__name" style="flex: 1; margin: 0 0.5em;" v-if="user">
-          {{user.displayName}}さん
-        </div>
+        <div
+          class="login__name"
+          style="flex: 1; margin: 0 0.5em;"
+          v-if="user"
+        >{{user.displayName}}さん</div>
         <button v-if="!user" @click="login">Login</button>
         <button v-if="user" @click="logout">Logout</button>
       </div>
@@ -19,18 +21,19 @@
           class="item"
           :class="{'selected': selectedId === item.id}"
         >
-          <div class="item__label">
-            {{item.name}}
-          </div>
+          <div class="item__label">{{item.name}}</div>
           <button class="item__remove" @click="removeItem(item)">x</button>
         </div>
         <button @click="addPost" class="addPost">New Document</button>
       </div>
-      
     </div>
     <div class="form">
-      <input type="text" v-model="name" @input="debouncedSave" />
+      <input type="text" v-model="name" @input="debouncedSave" class="name" />
       <textarea :disabled="!selectedItem" v-model="contents" @input="debouncedSave" class="source"></textarea>
+    </div>
+
+    <div class="output">
+      <anydown :blocks="splited" @change="updateBlock($event)"></anydown>
     </div>
   </div>
 </template>
@@ -40,27 +43,19 @@ import "firebase/auth";
 import "firebase/firestore";
 import { firebaseConfig } from "../share/config";
 import debounce from "lodash.debounce";
+import Anydown from "@anydown/anydown-core";
+import "@anydown/anydown-core/dist/anydown-core.es.css";
+import { compile, getYMD } from "./util";
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 let db = firebase.firestore();
 
-function getYMD() {
-  const dt = new Date();
-  const y = dt.getFullYear();
-  const m = (dt.getMonth() + 1).toString().padStart(2, "0");
-  const d = dt
-    .getDate()
-    .toString()
-    .padStart(2, "0");
-  const ho = dt.getHours().toString().padStart(2, "0");
-  const mi = dt.getMinutes().toString().padStart(2, "0");
-  const result = `${y}-${m}-${d} ${ho}:${mi}`;
-  return result;
-}
-
 export default {
+  components: {
+    Anydown
+  },
   data() {
     return {
       user: {},
@@ -68,8 +63,14 @@ export default {
       contents: "",
       name: "",
       selectedId: "",
-      original: ""
+      original: "",
+      splited: []
     };
+  },
+  watch: {
+    contents(val) {
+      this.splited = compile(val);
+    }
   },
   computed: {
     selectedDoc() {
@@ -86,6 +87,10 @@ export default {
     }
   },
   methods: {
+    updateBlock(payload) {
+      this.splited[payload.id].text = payload.type + "\n" + payload.body;
+      this.contents = this.splited.map(i => i.text).join("```");
+    },
     getDocById(id) {
       return db
         .doc(`users/${this.user.uid}`)
@@ -236,7 +241,7 @@ html {
   background: #99a;
   color: white;
 }
-.item__label{
+.item__label {
   padding: 0.25em 0.5em;
   flex: 1;
   white-space: nowrap;
@@ -244,36 +249,64 @@ html {
   user-select: none;
 }
 
-.item__remove{
+.item__remove {
   background: none;
   color: white;
   border: none;
   opacity: 0;
 }
-.item:hover .item__remove{
+.item:hover .item__remove {
   opacity: 1;
 }
-.item__remove:hover{
-  color: #CCF;
+.item__remove:hover {
+  color: #ccf;
 }
 
-
+.name {
+  font-size: 1.5em;
+  background: #333;
+  border: 1px solid black;
+  color: white;
+  outline: none;
+}
+.name:focus {
+  background: #444;
+}
 .source {
   flex: 1;
   width: 100%;
-}
-.addPost{
-  width: 100%; line-height: 1.5rem; background: #333; color: white; border: 1px solid white; margin-top: 4px;
+  background: #333;
+  color: white;
+  padding: 0.5rem;
+  border: 1px solid black;
   outline: none;
 }
-.addPost:hover{
+.source:focus {
+  background: #444;
+}
+.addPost {
+  width: 100%;
+  line-height: 1.5rem;
+  background: #333;
+  color: white;
+  border: 1px solid white;
+  margin-top: 4px;
+  outline: none;
+}
+.addPost:hover {
   background: #666;
 }
-.addPost:focus{
-  border:1px solid orange;
+.addPost:focus {
+  border: 1px solid orange;
 }
-.addPost:active{
-  border:1px solid white;
+.addPost:active {
+  border: 1px solid white;
 }
-
+.output {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  word-break: break-all;
+  padding: 0.5rem;
+}
 </style>
