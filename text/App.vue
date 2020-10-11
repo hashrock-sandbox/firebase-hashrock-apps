@@ -19,7 +19,7 @@
           :key="item.id"
           @click="selectItem(item)"
           class="item"
-          :class="{'selected': selectedId === item.id}"
+          :class="{'selected': selectedId === item.id, 'disabled': dirty}"
         >
           <div class="item__label">{{item.name}}</div>
           <button class="item__remove" @click="removeItem(item)">x</button>
@@ -105,23 +105,12 @@ export default {
     },
     selectItem(item) {
       if (this.dirty) {
-        this.selectedDoc
-          .update({
-            contents: this.contents,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-          })
-          .then(() => {
-            this.selectedId = item.id;
-            this.contents = item.contents;
-            this.original = this.contents;
-            this.name = item.name;
-          });
-      } else {
-        this.selectedId = item.id;
-        this.contents = item.contents;
-        this.original = this.contents;
-        this.name = item.name;
+        return;
       }
+      this.selectedId = item.id;
+      this.contents = item.contents;
+      this.original = this.contents;
+      this.name = item.name;
     },
     save() {
       this.selectedDoc.update({
@@ -183,11 +172,12 @@ export default {
                   found,
                   change.doc.data({ serverTimestamps: "estimate" })
                 );
-                if (this.selectedItem === found) {
-                  this.contents = found.contents;
-                }
+                // 入力中にupdateされるとUXが悪いので無効化
+                // if (this.selectedItem === found) {
+                //   this.contents = found.contents;
+                // }
               }
-              console.log("mod");
+              // console.log("mod");
             } else if (change.type === "removed") {
               this.items.splice(
                 this.items.findIndex(i => {
@@ -202,7 +192,7 @@ export default {
     });
   },
   created: function() {
-    this.debouncedSave = debounce(this.save, 500);
+    this.debouncedSave = debounce(this.save, 1000);
   }
 };
 </script>
@@ -240,6 +230,9 @@ html {
 .item.selected {
   background: #99a;
   color: white;
+}
+.item.disabled {
+  color: #aaa;
 }
 .item__label {
   padding: 0.25em 0.5em;
