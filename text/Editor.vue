@@ -28,7 +28,14 @@
       </div>
     </div>
     <div class="form">
-      <input type="text" v-model="name" @input="debouncedSave" class="name" />
+      <div class="form__nameWrapper">
+        <input type="text" v-model="name" @input="debouncedSave" class="name" />
+        <select v-model="publish" class="form__publish">
+          <option value="true">Public</option>
+          <option value="false">Private</option>
+        </select>
+        <button v-if="publish" @click="copyUrl">Copy URL</button>
+      </div>
       <textarea :disabled="!selectedItem" v-model="contents" @input="debouncedSave" class="source"></textarea>
     </div>
 
@@ -62,7 +69,8 @@ export default {
       name: "",
       selectedId: "",
       original: "",
-      splited: []
+      splited: [],
+      publish: false,
     };
   },
   watch: {
@@ -109,20 +117,31 @@ export default {
       this.contents = item.contents;
       this.original = this.contents;
       this.name = item.name;
+      this.publish = !!item.publish;
     },
     save() {
-      this.selectedDoc.update({
+      const post = {
         contents: this.contents,
         name: this.name,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        publish: !!this.publish
+      }
+      this.selectedDoc.update(post);
+
+      if(this.publish){
+        db.doc(`public/${this.user.uid}`)
+          .collection("posts")
+          .doc(this.selectedId)
+          .set(post)
+      }
       this.original = this.contents;
     },
     addPost() {
       const post = {
         name: `Memo ${getYMD()}`,
         contents: this.contents,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        publish: false
       };
       this.clear();
 
@@ -145,6 +164,11 @@ export default {
       this.contents = "";
       this.original = this.contents;
       this.selectedId = "";
+    },
+    copyUrl(){
+      const url = new URL(window.location.href);
+      window.prompt("Copy URL", `${url.origin}/#/preview/${this.user.uid}/${this.selectedId}`)
+      //navigator.clipboard.writeText("str");
     }
   },
   mounted() {
@@ -258,7 +282,15 @@ html {
   color: #ccf;
 }
 
+.form__nameWrapper{
+  display: flex;
+}
+.form__publish{
+  line-height: 1.5em;
+}
+
 .name {
+  flex: 1;
   font-size: 1.5em;
   background: #333;
   border: 1px solid black;

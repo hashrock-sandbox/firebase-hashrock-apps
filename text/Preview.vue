@@ -28,13 +28,14 @@ export default {
     const auth = firebase.auth();
     let db = firebase.firestore();
 
-    var docRef = db.collection("users").doc(this.$router.uid);
+    var docRef = db.doc(`public/${this.$route.params.uid}`).collection("posts").doc(this.$route.params.docid);
 
     docRef
       .get()
-      .then(function(doc) {
+      .then((doc)=> {
         if (doc.exists) {
-          console.log("Document data:", doc.data());
+          console.log("Document data:", );
+          this.contents = doc.data().contents
         } else {
           // doc.data() will be undefined in this case
           console.log("No such document!");

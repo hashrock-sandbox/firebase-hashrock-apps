@@ -10,7 +10,7 @@ Vue.use(VueRouter)
 const router = new VueRouter({
   routes: [
     {
-      path: '/preview/:uid/:docid/:pass',
+      path: '/preview/:uid/:docid',
       component: Preview
     },
     {
