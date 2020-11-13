@@ -1,7 +1,12 @@
 <template>
   <div>
-    <h1>Preview</h1>
-    <textarea v-model="contents" name id cols="50" rows="50"></textarea>
+    <div class="output">
+      <anydown :blocks="splited"></anydown>
+    </div>
+    <details>
+      <summary>Source</summary>
+      <textarea v-model="contents" name id cols="50" rows="50"></textarea>
+    </details>
   </div>
 </template>
 
@@ -18,24 +23,36 @@ import { compile, getYMD } from "./util";
 // Initialize Firebase
 
 export default {
+  components: {
+    Anydown
+  },
   data() {
     return {
-      contents: ""
+      contents: "",
+      splited: []
     };
+  },
+  watch: {
+    contents(val) {
+      this.splited = compile(val);
+    }
   },
   mounted() {
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     let db = firebase.firestore();
 
-    var docRef = db.doc(`public/${this.$route.params.uid}`).collection("posts").doc(this.$route.params.docid);
+    var docRef = db
+      .doc(`public/${this.$route.params.uid}`)
+      .collection("posts")
+      .doc(this.$route.params.docid);
 
     docRef
       .get()
-      .then((doc)=> {
+      .then(doc => {
         if (doc.exists) {
-          console.log("Document data:", );
-          this.contents = doc.data().contents
+          console.log("Document data:");
+          this.contents = doc.data().contents;
         } else {
           // doc.data() will be undefined in this case
           console.log("No such document!");

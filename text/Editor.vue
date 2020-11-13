@@ -30,11 +30,11 @@
     <div class="form">
       <div class="form__nameWrapper">
         <input type="text" v-model="name" @input="debouncedSave" class="name" />
-        <select v-model="publish" class="form__publish">
+        <select v-model="publish" class="form__publish" @change="debouncedSave">
           <option value="true">Public</option>
           <option value="false">Private</option>
         </select>
-        <button v-if="publish" @click="copyUrl">Copy URL</button>
+        <button v-if="publish === 'true'" @click="copyUrl">Copy URL</button>
       </div>
       <textarea :disabled="!selectedItem" v-model="contents" @input="debouncedSave" class="source"></textarea>
     </div>
@@ -70,7 +70,7 @@ export default {
       selectedId: "",
       original: "",
       splited: [],
-      publish: false,
+      publish: false
     };
   },
   watch: {
@@ -117,22 +117,28 @@ export default {
       this.contents = item.contents;
       this.original = this.contents;
       this.name = item.name;
-      this.publish = !!item.publish;
+      this.publish = item.publish.toString();
     },
     save() {
       const post = {
         contents: this.contents,
         name: this.name,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        publish: !!this.publish
-      }
+        publish: this.publish
+      };
       this.selectedDoc.update(post);
 
-      if(this.publish){
+      if (this.publish === "true") {
         db.doc(`public/${this.user.uid}`)
           .collection("posts")
           .doc(this.selectedId)
-          .set(post)
+          .set(post);
+      } else {
+        console.log("remove: ", this.selectedId);
+        db.doc(`public/${this.user.uid}`)
+          .collection("posts")
+          .doc(this.selectedId)
+          .delete();
       }
       this.original = this.contents;
     },
@@ -158,6 +164,10 @@ export default {
     },
     removeItem(item) {
       this.getDocById(item.id).delete();
+      db.doc(`public/${this.user.uid}`)
+        .collection("posts")
+        .doc(this.selectedId)
+        .delete();
       this.clear();
     },
     clear() {
@@ -165,9 +175,12 @@ export default {
       this.original = this.contents;
       this.selectedId = "";
     },
-    copyUrl(){
+    copyUrl() {
       const url = new URL(window.location.href);
-      window.prompt("Copy URL", `${url.origin}/#/preview/${this.user.uid}/${this.selectedId}`)
+      window.prompt(
+        "Copy URL",
+        `${url.origin}/#/preview/${this.user.uid}/${this.selectedId}`
+      );
       //navigator.clipboard.writeText("str");
     }
   },
@@ -282,10 +295,10 @@ html {
   color: #ccf;
 }
 
-.form__nameWrapper{
+.form__nameWrapper {
   display: flex;
 }
-.form__publish{
+.form__publish {
   line-height: 1.5em;
 }
 
