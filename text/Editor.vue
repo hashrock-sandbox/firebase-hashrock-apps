@@ -57,6 +57,20 @@ import { compile, getYMD } from "./util";
 let auth;
 let db;
 
+function getDoc(db, uid, docid) {
+  return db
+    .doc(`users/${uid}`)
+    .collection("posts")
+    .doc(docid);
+}
+
+function removeDoc(db, uid, docid) {
+  return db
+    .doc(`users/${uid}`)
+    .collection("posts")
+    .doc(docid);
+}
+
 export default {
   components: {
     Anydown
@@ -80,10 +94,7 @@ export default {
   },
   computed: {
     selectedDoc() {
-      return db
-        .doc(`users/${this.user.uid}`)
-        .collection("posts")
-        .doc(this.selectedId);
+      return getDoc(db, this.user.uid, this.selectedId);
     },
     selectedItem() {
       return this.items.find(i => i.id === this.selectedId);
@@ -98,10 +109,7 @@ export default {
       this.contents = this.splited.map(i => i.text).join("```");
     },
     getDocById(id) {
-      return db
-        .doc(`users/${this.user.uid}`)
-        .collection("posts")
-        .doc(id);
+      return getDoc(db, this.user.uid, id);
     },
     login() {
       auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
